@@ -21,7 +21,7 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -30,12 +30,12 @@ app.use(
 
       return callback(null, false);
     },
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
+    optionsSuccessStatus: 204,
   })
 );
 
-app.options("/api/*", cors());
 
 app.use(
   helmet({
