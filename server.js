@@ -13,29 +13,29 @@ const groq = new Groq({
 });
 
 
+
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://healthcare-translation-web-app-with-six.vercel.app/",
+  "https://healthcare-translation-web-app-with-six.vercel.app",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow server-to-server & tools like Postman
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return callback(null, true);
       }
+
+      return callback(null, false);
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false, // IMPORTANT for Vercel
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"],
   })
 );
+
+app.options("*", cors()); 
 
 app.use(
   helmet({
@@ -122,13 +122,6 @@ app.get("/api/models", async (req, res) => {
   }
 });
 
-app.use((err, req, res, next) => {
-  if (err.message === "Not allowed by CORS") {
-    res.status(403).json({ error: "CORS Error: Origin not allowed" });
-  } else {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Server ready at http://localhost:${PORT}`);
