@@ -1,4 +1,3 @@
-// server.js - Optimized for CORS and Groq API
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -9,47 +8,45 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. INITIALIZE GROQ
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// 2. CORS MIDDLEWARE (MUST BE FIRST)
-// Using a function to dynamically allow the origin hitting the server
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://healthcare-translation-web-app-with-six.vercel.app/",
+];
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl)
-      // or specific localhost origins
-      if (
-        !origin ||
-        origin.includes("localhost") ||
-        origin.includes("127.0.0.1")
-      ) {
+      // Allow server-to-server & tools like Postman
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-    credentials: true,
-    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false, // IMPORTANT for Vercel
   })
 );
 
-// 3. SECURITY HEADERS (RECONFIGURED)
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: false, // Disable for dev to prevent script blocks
+    contentSecurityPolicy: false,
   })
 );
 
-// 4. DATA PARSING
 app.use(express.json());
 
-// 5. RATE LIMITING (APPLIED AFTER CORS)
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -57,7 +54,7 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
-// --- ROUTES ---
+
 
 const languageNames = {
   "en-US": "English",
@@ -72,12 +69,10 @@ const languageNames = {
   ja: "Japanese",
 };
 
-// Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", groqApiConfigured: !!process.env.GROQ_API_KEY });
 });
 
-// Translation Endpoint
 app.post("/api/translate", async (req, res) => {
   try {
     const { text, sourceLang, targetLang } = req.body;
@@ -118,7 +113,6 @@ app.post("/api/translate", async (req, res) => {
   }
 });
 
-// Models List
 app.get("/api/models", async (req, res) => {
   try {
     const models = await groq.models.list();
@@ -128,7 +122,6 @@ app.get("/api/models", async (req, res) => {
   }
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   if (err.message === "Not allowed by CORS") {
     res.status(403).json({ error: "CORS Error: Origin not allowed" });
